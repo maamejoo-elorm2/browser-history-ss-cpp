@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser History Stack Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f7f4ed;        /* Soft Cream Background */
+            --card-bg: #fffdf9;         /* Parchment White */
+            --border-color: #d6ccc2;    /* Warm Beige Border */
+            --text-main: #4a3b32;       /* Rich Deep Brown */
+            --text-muted: #8c7a6b;      /* Soft Muted Brown */
+            --primary: #8d5b4c;         /* Terracotta / Warm Brown */
+            --primary-hover: #734739;   
+            --accent: #bc8a77;          /* Caramel Accent */
+            --top-badge: #d4a373;       /* Golden Brown Tag */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: var(--primary);
+        }
+
+        header p {
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 25px -5px rgba(74, 59, 50, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .controls input {
+            flex: 1;
+            min-width: 220px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1.5px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-size: 1rem;
+        }
+
+        .controls input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-push {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-push:hover { background-color: var(--primary-hover); }
+
+        .btn-pop {
+            background-color: #b85d43;
+            color: white;
+        }
+        .btn-pop:hover { background-color: #9c4c35; }
+
+        .btn-clear {
+            background-color: #d6ccc2;
+            color: var(--text-main);
+        }
+        .btn-clear:hover { background-color: #c2b5a6; }
+
+        /* Stack Visual Container (Vertical Stack - Top is at the top) */
+        .stack-track-container {
+            margin-top: 15px;
+        }
+
+        .stack-labels {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stack-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 200px;
+            max-height: 350px;
+            padding: 15px;
+            background-color: var(--bg-color);
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            overflow-y: auto;
+            align-items: center;
+        }
+
+        .empty-stack {
+            color: var(--text-muted);
+            margin: auto;
+            font-style: italic;
+        }
+
+        /* Stack Node Card */
+        .stack-node {
+            background: linear-gradient(135deg, #fffdf9, #f0ebd8);
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 450px;
+            box-shadow: 0 4px 6px rgba(74, 59, 50, 0.05);
+            animation: fadeIn 0.3s ease-in-out;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stack-node.top {
+            border: 2px solid var(--primary);
+            background: linear-gradient(135deg, #fdf6ec, #faedcd);
+        }
+
+        .node-title {
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .node-tag {
+            font-size: 0.7rem;
+            background: var(--top-badge);
+            color: #3e2723;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats & Logs */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-box h3 { margin: 0; font-size: 1.4rem; color: var(--primary); }
+        .stat-box p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.85rem; }
+
+        .log-box {
+            background-color: var(--bg-color);
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            height: 110px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Browser History Simulator</h1>
+            <p>Stack Data Structure Visualizer (LIFO: Last-In, First-Out)</p>
+        </header>
+
+        <!-- Stats Section -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <h3 id="stat-total">0</h3>
+                <p>Pages in History Stack</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="stat-top">None</h3>
+                <p>Current Page (Top)</p>
+            </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="card">
+            <div class="controls">
+                <input type="text" id="urlInput" placeholder="Website URL (e.g., github.com)" />
+                <button class="btn-push" onclick="pushPage()">Visit Page (Push)</button>
+                <button class="btn-pop" onclick="popPage()">Go Back (Pop)</button>
+                <button class="btn-clear" onclick="clearStack()">Clear History</button>
+            </div>
+
+            <!-- Stack Visualization Container -->
+            <div class="stack-track-container">
+                <div class="stack-labels">
+                    <span>&darr; Top of Stack (Current Active Page)</span>
+                    <span>Bottom of Stack (Oldest Page) &uarr;</span>
+                </div>
+                <div class="stack-visual" id="stackVisual">
+                    <div class="empty-stack">Browser history is empty. Visit a webpage to begin!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <h3 style="margin-top:0; font-size: 1rem; color: var(--text-muted);">System Activity Log</h3>
+            <div class="log-box" id="logBox">
+                [Browser initialized. Ready for web navigation...]
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stack = [];
+
+        function logAction(message) {
+            const logBox = document.getElementById('logBox');
+            const time = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<br>[${time}] ${message}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function updateUI() {
+            const visual = document.getElementById('stackVisual');
+            const statTotal = document.getElementById('stat-total');
+            const statTop = document.getElementById('stat-top');
+
+            statTotal.textContent = stack.length;
+
+            if (stack.length === 0) {
+                visual.innerHTML = '<div class="empty-stack">Browser history is empty. Visit a webpage to begin!</div>';
+                statTop.textContent = 'None';
+                return;
+            }
+
+            statTop.textContent = stack[stack.length - 1];
+
+            // Render stack with the TOP at the top of the visual box (LIFO order)
+            visual.innerHTML = '';
+            for (let i = stack.length - 1; i >= 0; i--) {
+                const node = document.createElement('div');
+                const isTop = (i === stack.length - 1);
+                node.className = `stack-node ${isTop ? 'top' : ''}`;
+                
+                let tagHtml = isTop ? '<span class="node-tag">Current Page (Top)</span>' : `<span style="font-size:0.8rem; color:var(--text-muted);">Level ${i + 1}</span>`;
+
+                node.innerHTML = `
+                    <div class="node-title">${stack[i]}</div>
+                    ${tagHtml}
+                `;
+                visual.appendChild(node);
+            }
+        }
+
+        function pushPage() {
+            const input = document.getElementById('urlInput');
+            const url = input.value.trim();
+
+            if (!url) {
+                alert('Please enter a website URL!');
+                return;
+            }
+
+            stack.push(url);
+            logAction(`Visited & pushed: "${url}" onto stack.`);
+            input.value = '';
+            updateUI();
+        }
+
+        function popPage() {
+            if (stack.length === 0) {
+                alert('History is empty! No pages to go back to.');
+                logAction('Go Back failed: Stack Underflow (Empty history).');
+                return;
+            }
+
+            const leftPage = stack.pop();
+            logAction(`Went back from: "${leftPage}". Removed from stack.`);
+            updateUI();
+        }
+
+        function clearStack() {
+            if (stack.length === 0) return;
+            stack = [];
+            logAction('Browser history cleared manually.');
+            updateUI();
+        }
+    </script>
+</body>
+</html>
